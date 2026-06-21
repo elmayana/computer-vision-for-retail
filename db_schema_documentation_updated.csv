@@ -1,0 +1,55 @@
+Table,Column,Data Type,Constraints,Primary Key,Foreign Key,Purpose
+zones,zone_id,SERIAL,NOT NULL,YES,NO,Unique identifier for each zone
+zones,zone_name,VARCHAR(100),UNIQUE (with camera_id),NO,NO,"Human-readable name for the zone (e.g. ""Entrance Floor 1"")"
+zones,camera_id,VARCHAR(50),UNIQUE (with zone_name),NO,NO,Identifier linking zone to physical camera
+zones,polygon_coordinates,JSONB,,NO,NO,Normalized polygon vertices for Roboflow PolygonZone; stores array of [x y] pairs
+zones,floor,VARCHAR(20),,NO,NO,"Floor level identifier (e.g. ""L1"" ""L2"" ""B1"")"
+zones,zone_type,VARCHAR(50),,NO,NO,Categorical type: entrance entrance queue checkout corridor intrusion_detection etc.
+zones,reid_enabled,BOOLEAN,DEFAULT FALSE,NO,NO,Flag indicating if ReID tracking is active in this zone
+detection_events,unique_detection_id,SERIAL,NOT NULL,YES,NO,Unique identifier for each detection frame event
+detection_events,timestamp,TIMESTAMP,,NO,NO,UTC timestamp of frame capture
+detection_events,frame_number,INT,,NO,NO,Sequential frame count from video stream
+detection_events,camera_id,VARCHAR(50),,NO,NO,Source camera identifier
+detection_events,zone_id,INT,REFERENCES zones(zone_id),NO,YES,Zone where detection occurred; null if outside all zones
+detection_events,polygon_zone_id,INT,REFERENCES zones(zone_id),NO,YES,Specific polygon zone for spatial filtering (distinct from zone_id)
+detection_events,model_name,VARCHAR(100),,NO,NO,"Model used for detection (e.g. ""PeopleNet_ONNX"")"
+detection_events,object_class,VARCHAR(50),,NO,NO,"Detected class label (e.g. ""person"")"
+detection_events,confidence,FLOAT,,NO,NO,Model confidence score 0.0-1.0
+detection_events,bbox,JSONB,,NO,NO,"JSON object: {""x"": float ""y"": float ""width"": float ""height"": float} in normalized coordinates"
+detection_events,track_id,VARCHAR(50),,NO,NO,Intra-video tracking ID from ByteTrack or similar; resets per video segment
+detection_events,reid_type,VARCHAR(20),,NO,NO,"ReID method identifier (e.g. ""OSNet"" ""None"")"
+detection_events,reid_id,VARCHAR(50),,NO,NO,Cross-video ReID identity; matches reid_features.reid_id if confident match found
+detection_events,previous_zone_id,INT,REFERENCES zones(zone_id),NO,YES,Previous zone for movement analysis; tracks zone transitions
+detection_events,movement_type,VARCHAR(20),,NO,NO,"Discrete movement classification: IN, OUT, or DWELL"
+detection_events,direction,VARCHAR(20),,NO,NO,"Directional confirmation once object has moved in said direction, set at the zone definition (for example, in_direction is left to right, so once the object has moved left to right, the direction is right or IN the store)"
+detection_events,movement_direction,VARCHAR(20),,NO,NO,"Direction in reference to the bounding box, is the object moving down, up, left, or right"
+detection_events,dwell_time,FLOAT,,NO,NO,Seconds spent in current zone; null if movement_type is not dwell
+detection_events,object_count_in_zone,INT,,NO,NO,Aggregate count of unique persons in zone at timestamp
+detection_events,processing_latency,FLOAT,,NO,NO,Inference + database write latency in milliseconds; SLA tracking
+emotion_events,unique_detection_id,INT,REFERENCES detection_events,NO,YES,Links emotion classification to parent detection event
+emotion_events,emotion,VARCHAR(50),,NO,NO,"Classified emotion label (e.g. ""happy"" ""angry"" ""neutral"" ""sad"" ""fearful"" ""surprised"" ""disgusted"")"
+emotion_events,confidence,FLOAT,,NO,NO,DeepFace emotion confidence score 0.0-1.0
+emotion_events,bbox,JSONB,,NO,NO,Face bounding box in normalized coordinates; may differ from detection_events.bbox if face is partial
+rules,rule_id,SERIAL,NOT NULL,YES,NO,Unique identifier for each alert rule
+rules,rule_name,VARCHAR(100),,NO,NO,"Human-readable rule name (e.g. ""Intrusion After Hours"" ""High Dwell Time"")"
+rules,zone_id,INT,REFERENCES zones(zone_id),NO,YES,Zone where rule is enforced; null if rule applies globally
+rules,trigger_condition,VARCHAR(255),,NO,NO,"Logic descriptor (e.g. ""dwell_time > threshold_max AND object_class = person"")"
+rules,threshold_min,FLOAT,,NO,NO,Lower bound for trigger (e.g. minimum crowd count or dwell time)
+rules,threshold_max,FLOAT,,NO,NO,Upper bound for trigger (e.g. maximum allowed dwell time)
+rules,severity,VARCHAR(20),,NO,NO,Alert severity level: INFO WARNING CRITICAL
+rules,rule_type,VARCHAR(50),,NO,NO,"Rule category (e.g. ""intrusion_detection"" ""crowd_analysis"" ""dwell_time"" ""emotion"" ""planogram"")"
+rules,active,BOOLEAN,DEFAULT TRUE,NO,NO,Enable/disable rule without deletion
+notifications,notification_id,SERIAL,NOT NULL,YES,NO,Unique identifier for each alert
+notifications,timestamp,TIMESTAMP,,NO,NO,UTC timestamp when alert was triggered
+notifications,rule_id,INT,REFERENCES rules(rule_id),NO,YES,Rule that triggered this notification
+notifications,unique_detection_id,INT,REFERENCES detection_events(unique_detection_id),NO,YES,Detection event that caused alert; may be null for aggregate rules
+notifications,zone_id,INT,REFERENCES zones(zone_id),NO,YES,Zone where alert occurred
+notifications,camera_id,VARCHAR(50),,NO,NO,Camera that triggered alert
+notifications,trigger_value,JSONB,,NO,NO,"Actual metric value at time of trigger (e.g. {""dwell_time"": 45.2 ""threshold_max"": 40})"
+notifications,message,VARCHAR(255),,NO,NO,Human-readable alert message for dashboard/dashboard display
+reid_features,reid_id,VARCHAR(50),,YES,NO,Cross-video identity identifier; composite of hash fragments or UUID to ensure uniqueness
+reid_features,feature_vector,JSONB,,NO,NO,OSNet embedding (512-dim float array) serialized as JSON; used for cosine similarity matching
+reid_features,last_seen,TIMESTAMP,,NO,NO,Most recent timestamp this identity was observed
+reid_features,last_zone_id,INT,REFERENCES zones(zone_id),NO,YES,Last zone where this identity was detected
+reid_features,last_camera_id,VARCHAR(50),,NO,NO,Last camera that observed this identity
+reid_features,status,VARCHAR(20),DEFAULT 'active',NO,NO,State tracking: active (recently seen) inactive (not seen > threshold) archived (historical)

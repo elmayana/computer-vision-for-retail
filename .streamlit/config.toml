@@ -1,0 +1,18 @@
+[theme]
+# Body text → Source Sans (clean, readable for data labels and widget text)
+font = "sans-serif"
+
+# Headings (h1–h6, st.header, st.subheader) → Source Serif (editorial weight)
+headingFont = "sans-serif"
+
+# Code blocks and st.code → Source Code Pro (monospace)
+codeFont = "monospace"
+
+# Base font size in px
+baseFontSize = 16
+
+
+[theme.sidebar]
+# Sidebar inherits body + heading fonts from [theme] above
+font = "sans-serif"
+headingFont = "sans-serif"

@@ -15,7 +15,7 @@ This system layers five computer vision technologies on top of a standard mall c
 | **Emotion Classification** | Aggregate emotional state of customers by zone and hour |
 | **ReID + Customer Journey** | Cross-camera identity matching and Sankey diagram flow visualisation |
 | **Security Notifications** | Automated alerts for intrusion detection and restricted zone breaches |
-| **Operations Notifications** | Staffing level alerts based on crowd density thresholds |
+| **Notifications** | Staffing level & Intrusion alerts  |
 | **BI Dashboard** | Unified Metabase dashboard connecting all data streams |
 
 ---
