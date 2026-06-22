@@ -1,6 +1,4 @@
 """
-notification_service.py
-
 Listens on Postgres channel 'cv_alerts' and dispatches formatted alerts to
 Telegram. Two notification types, each with its own message format and
 debounce window:
@@ -8,7 +6,7 @@ debounce window:
   SECURITY    — intrusion detections. Sends the cropped intruder image
                 (saved at inference time, see save_intruder_crop in the
                 inference notebook) alongside zone, time, movement_type,
-                severity. Debounced 5 min per zone — an intrusion is rare
+                severity. Debounced 5 min per zone. An intrusion is rare
                 and high-stakes, repeat alerts within a window are noise,
                 not new information.
 
@@ -18,9 +16,7 @@ debounce window:
                 state changes faster and operations teams want closer to
                 real-time counts, just not literally per-frame.
 
-Run as a standalone process (NOT inside the notebook): the main loop blocks
-forever waiting on Postgres notifications, which would freeze a notebook
-kernel if run as a cell.
+Run as a standalone process
 """
 
 import json
