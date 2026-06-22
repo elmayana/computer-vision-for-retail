@@ -1,8 +1,11 @@
-# retail-deep-dive-computer-vision
+# Computer Vision for Retail
 
-> A full-stack computer vision intelligence system for retail and mall environments — from model inference to business analytics.
+> A computer vision intelligence system for retail and mall environments — from model inference to business analytics.
 
-Built as part of the **[Inside AI with Kayana](https://www.youtube.com/@InsideAIwithKayana)** YouTube channel. This project demonstrates how a single camera network can produce intelligent, actionable data for marketing, operations, and security teams in retail environments.
+<!-- Add output video screenshot here -->
+<!-- Add Metabase dashboard screenshot here -->
+
+Built as part of the **[Inside AI with Kayana](https://www.youtube.com/@InsideAIwithKayana)** YouTube channel. This project shows you how a standard camera network can be turned into an intelligent data system — one that feeds marketing, operations, and security teams with real, actionable insights.
 
 ---
 
@@ -12,11 +15,12 @@ This system layers five computer vision technologies on top of a standard mall c
 
 | Technology | What It Produces |
 |---|---|
-| **Emotion Classification** | Aggregate emotional state of customers by zone and hour |
-| **ReID + Customer Journey** | Cross-camera identity matching and Sankey diagram flow visualisation |
-| **Security Notifications** | Automated alerts for intrusion detection and restricted zone breaches |
-| **Notifications** | Staffing level & Intrusion alerts  |
-| **BI Dashboard** | Unified Metabase dashboard connecting all data streams |
+| **Emotion Classification** | Capture emotional state of shoppers |
+| **Multi-Camera ReID** | Cross-camera identity matching and customer journey visualisation |
+| **Crowd Analysis** | Zone-level occupancy counts and trend tracking |
+| **Intrusion Detection** | Automated alerts when restricted zones are breached |
+| **BI Dashboard** | Unified Streamlit dashboard connecting all data streams |
+| **Real-Time Notifications** | Telegram alerts powered by Postgres LISTEN/NOTIFY |
 
 ---
 
@@ -24,8 +28,6 @@ This system layers five computer vision technologies on top of a standard mall c
 
 > 📹 Video walkthrough coming soon on [Inside AI with Kayana](https://www.youtube.com/@InsideAIwithKayana)
 
-<!-- Add output video screenshot here -->
-<!-- Add Metabase dashboard screenshot here -->
 
 ---
 
@@ -33,12 +35,15 @@ This system layers five computer vision technologies on top of a standard mall c
 
 | Layer | Tool |
 |---|---|
-| People & Face Detection | [NVIDIA PeopleNet](https://catalog.ngc.nvidia.com/orgs/nvidia/teams/tao/models/peoplenet) (DetectNet_v2, ONNX) |
+| People Detection | [NVIDIA PeopleNet](https://catalog.ngc.nvidia.com/orgs/nvidia/teams/tao/models/peoplenet) (ONNX) |
+| Re-Identification | [OSNet via torchreid](https://github.com/KaiyangZhou/deep-person-reid) |
 | Emotion Classification | [DeepFace](https://github.com/serengil/deepface) |
 | Zone Configuration | [Roboflow PolygonZone](https://polygonzone.roboflow.com/) |
+| Object Tracking | [ByteTrack](https://github.com/ifzhang/ByteTrack) |
 | Database | PostgreSQL (local) |
-| Dashboard | [Metabase](https://www.metabase.com/) (local) |
-| Demo Environment | Jupyter Notebook (local) |
+| Dashboard | Streamlit |
+| Notifications | Telegram Bot API + Postgres LISTEN/NOTIFY |
+| Demo Environment | Jupyter Notebook (VS Code) |
 | Language | Python 3.13 |
 
 ---
@@ -47,35 +52,29 @@ This system layers five computer vision technologies on top of a standard mall c
 
 ```
 retail-deep-dive-computer-vision/
+├── .streamlit/
 ├── models/
 │   └── peoplenet.onnx
-├── videos/
-│   ├── input.mp4
-│   └── output.mp4
-├── retail_cv_pipeline.ipynb
+├── Input_Videos/
+│   ├── Emotion_Classification
+│   ├── ReID
+│   ├── Crowd_Analysis
+│   ├── Intrusion_Detection
+├── Output_Videos/
+│   ├── Emotion_Classification
+│   ├── ReID
+│   ├── Crowd_Analysis
+│   ├── Intrusion_Detection
+├── zone_setup_frames/
+├── alert_crops/
+├── synthetic_data_export/
+├── demo_code.ipynb       ← main notebook (inference pipeline)
+├── dashboard_combined_app.py            ← Streamlit analytics dashboard with real and synthetic data combined
+├── dashboard_real_app.py            ← Streamlit analytics dashboard with real data only
+├── notification_service.py        ← real-time Telegram alert service
 └── README.md
 ```
 
-### Notebook Structure
-
-```
-── SETUP
-   Cell 1   Imports
-   Cell 2A  Configuration
-   Cell 3   PostgreSQL Connection & Schema (5 tables)
-   Cell 4   Zones & Rules Setup
-   Cell 5   Global Functions
-
-── EMOTION CLASSIFICATION
-   Cell 6   Load Models
-   Cell 7   Zone Verification
-   Cell 8   Single Frame Verification
-   Cell 9   Inference Loop
-   Cell 10  Verify Results & Charts
-   Cell 11  Close Connections
-```
-
----
 
 ## Database 
 
@@ -84,9 +83,10 @@ Five PostgreSQL tables store all CV outputs:
 ```
 zones              ← polygon zone definitions per camera
 rules              ← notification trigger rules
-detection_events   ← every PeopleNet detection with zone, class, bbox
+detection_events   ← all detection metadata from every use case
 emotion_events     ← DeepFace results linked to detection_events
 notifications      ← triggered alerts linked to rules and detections
+reid_features      ← feature vectors for multicamera reidentification
 ```
 
 ---
@@ -96,8 +96,8 @@ notifications      ← triggered alerts linked to rules and detections
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/elmayana/retail-deep-dive-computer-vision.git
-cd retail-deep-dive-computer-vision
+git clone https://github.com/elmayana/computer-vision-for-retail.git
+cd computer-vision-for-retail
 ```
 
 ### 2. Create and activate a virtual environment
@@ -108,29 +108,44 @@ venv\Scripts\activate        # Windows
 source venv/bin/activate     # macOS/Linux
 ```
 
-### 3. Install dependencies
+### 3. Install dependencies and pytorch
 install requirements.txt file here
 ```bash
-pip install opencv-python deepface psycopg2-binary numpy matplotlib ipywidgets
+pip install -r requirements.txt
 ```
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cuXXX 
+```
+where [XXX] is the CUDA version (check using nvidia-smi command)
 
 ### 4. Set up PostgreSQL
 
 - Install PostgreSQL from https://www.postgresql.org/download/
-- Create a database called `mall_cv`
-- Update `DB_PASSWORD` in Cell 2 with your postgres password
+- Create a database
+- Update `DB_PASSWORD` and `DB_USERNAME` with your password and username in demo-code.ipynb
+- in the .streamlit folder, create a secrets.toml file
+```python
+[connections.postgresql]
+dialect = "postgresql"
+host = "localhost"
+port = "your_port"
+database = "your_database"
+username = "your_username"
+password = "your_password"
+```
 
 ### 5. Download PeopleNet
 
-- Create a free NVIDIA NGC account at https://ngc.nvidia.com
 - Download `deployable_quantized_onnx_v2.6.3` from the [PeopleNet NGC page](https://catalog.ngc.nvidia.com/orgs/nvidia/teams/tao/models/peoplenet)
-- Rename the file to `peoplenet.onnx` and place it in the `models/` folder
+- Place it in the `models/` folder
 
-### 6. Configure zone coordinates
+### 6. Download Input Videos
 
-- Extract a frame from your input video using Cell 7
-- Upload `zone_setup_frame.jpg` to [Roboflow PolygonZone](https://polygonzone.roboflow.com/)
-- Draw your zones and paste the coordinates into Cell 4
+- Emotion Classification videos: (1) https://www.pexels.com/video/people-walking-inside-the-mall-4750042/   (2)https://www.pexels.com/video/toronto-canada-ontario-downton-14365388/
+- Download the ReID input videos here: https://www.dropbox.com/scl/fi/pbip7ihu80owrcs8tfibp/ReID_input_videos.zip?rlkey=7jtpmtxtlranclrbf2snsdjjb&st=193sxvn3&dl=0
+- Crowd Analysis video: https://www.pexels.com/video/time-lapse-video-of-people-inside-the-book-shop-4473910/
+- Intrusion Detection video: https://www.pexels.com/video/elegant-man-walking-in-corridor-11903990/
 
 ---
 
@@ -138,7 +153,7 @@ pip install opencv-python deepface psycopg2-binary numpy matplotlib ipywidgets
 
 > 📹 Full walkthrough: [Inside AI with Kayana](https://www.youtube.com/@InsideAIwithKayana) *(video coming soon)*
 
-Run the notebook cells in order from Cell 1 through Cell 11.
+Run the notebook cells 
 
 ---
 
