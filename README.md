@@ -176,10 +176,6 @@ To receive real-time alerts on Telegram:
 
 Open the notebook in VS Code (or Jupyter Lab) and run the cells section by section. 
 
-```bash
-code demo_code.ipynb
-```
-
 ### Streamlit dashboard
 
 Once the inference pipeline has run and your CSVs or database are populated:
