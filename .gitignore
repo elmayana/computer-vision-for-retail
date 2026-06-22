@@ -1,0 +1,30 @@
+# Created by venv; see https://docs.python.org/3/library/venv.html
+
+venv/
+
+
+Input_Videos/**/*.mp4
+!Input_Videos/**/.gitkeep
+Output_Videos/**/*.mp4
+!Output_Videos/**/.gitkeep
+
+alert_crops/**/*.jpg
+alert_crops/**/*.jpeg
+alert_crops/**/*.png
+!alert_crops/**/.gitkeep
+
+*.zip
+peoplenet_deployable_quantized_onnx_v2.6.3/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Secrets
+.streamlit/secrets.toml
+
+data_generation.py
+TEST_data_gen_2.py
+note.txt
+color_palette.py
