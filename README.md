@@ -142,18 +142,70 @@ password = "your_password"
 
 ### 6. Download Input Videos
 
-- Emotion Classification videos: (1) https://www.pexels.com/video/people-walking-inside-the-mall-4750042/   (2)https://www.pexels.com/video/toronto-canada-ontario-downton-14365388/
-- Download the ReID input videos here: https://www.dropbox.com/scl/fi/pbip7ihu80owrcs8tfibp/ReID_input_videos.zip?rlkey=7jtpmtxtlranclrbf2snsdjjb&st=193sxvn3&dl=0
-- Crowd Analysis video: https://www.pexels.com/video/time-lapse-video-of-people-inside-the-book-shop-4473910/
-- Intrusion Detection video: https://www.pexels.com/video/elegant-man-walking-in-corridor-11903990/
+| Section | Download |
+|---|---|
+| Emotion Classification |[Emotion Video 1](https://www.pexels.com/video/people-walking-inside-the-mall-4750042/) [Emotion Video 2](https://www.pexels.com/video/toronto-canada-ontario-downton-14365388/) |
+| ReID (2 camera views) | [Download ReID videos](https://www.dropbox.com/scl/fi/pbip7ihu80owrcs8tfibp/ReID_input_videos.zip?rlkey=7jtpmtxtlranclrbf2snsdjjb&st=193sxvn3&dl=0) |
+| Crowd Analysis | [Pexels — Book Shop Time Lapse](https://www.pexels.com/video/time-lapse-video-of-people-inside-the-book-shop-4473910/) |
+| Intrusion Detection | [Pexels — Corridor Video](https://www.pexels.com/video/elegant-man-walking-in-corridor-11903990/) |
+
+Place all videos in the `Input_Videos/` folder and update the file paths
+
+
+### 7. Set up Telegram Notifications 
+
+To receive real-time alerts on Telegram:
+
+1. Message [@BotFather](https://t.me/botfather) on Telegram and create a new bot — you'll receive a **bot token**
+2. Start a conversation with your new bot, then retrieve your **chat ID** by visiting:
+   ```
+   https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates
+   ```
+3. Add both values to `notification_service.py`:
+   ```python
+   TELEGRAM_BOT_TOKEN = "your_bot_token"
+   TELEGRAM_CHAT_ID = "your_chat_id"
+   ```
 
 ---
 
-## How to Run
 
-> 📹 Full walkthrough: [Inside AI with Kayana](https://www.youtube.com/@InsideAIwithKayana) *(video coming soon)*
+---
 
-Run the notebook cells 
+### Main inference pipeline
+
+Open the notebook in VS Code (or Jupyter Lab) and run the cells section by section. 
+
+```bash
+code demo_code.ipynb
+```
+
+### Streamlit dashboard
+
+Once the inference pipeline has run and your CSVs or database are populated:
+
+```bash
+streamlit run dashboard_combined_app.py
+```
+
+The dashboard opens in your browser at `http://localhost:8501`. It includes:
+- Customer journey Sankey diagram (cross-zone flow)
+- Emotion composition by zone and hour
+- Floor plan heatmap
+- Crowd and intrusion trend charts
+- Sidebar date range filter
+
+### Real-time notification service
+
+Run this in a **separate terminal** while the inference pipeline is active:
+
+```bash
+python notification_service.py
+```
+
+This service listens to Postgres for new events and sends a Telegram message whenever a configured rule is triggered. Security alerts (intrusion) and operational alerts (crowd thresholds) have separate debounce windows to prevent alert fatigue.
+
+---
 
 ---
 

@@ -33,9 +33,9 @@ import psycopg2.extensions
 import requests
 
 DB_CONFIG = {
-    "dbname": "retail_cv_deep_dive",
-    "user": "postgres",
-    "password": "abc123",
+    "dbname": "my_database_name",
+    "user": "my_username",
+    "password": "my_password",
     "host": "localhost",
     "port": 5432,
 }
