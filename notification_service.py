@@ -39,8 +39,8 @@ DB_CONFIG = {
     "host": "localhost",
     "port": 5432,
 }
-TELEGRAM_BOT_TOKEN = "8717722565:AAHDuI6aO3s8n1ilWBGbWOwgHSrruC9kwrY"   # from @BotFather
-TELEGRAM_CHAT_ID = "1410539737"       # numeric chat id (see setup notes)
+TELEGRAM_BOT_TOKEN = "your-token-here"   # from @BotFather
+TELEGRAM_CHAT_ID = "your-chat-id-here"       # numeric chat id (see setup notes)
 
 
 DEBOUNCE_WINDOWS = {

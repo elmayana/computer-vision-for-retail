@@ -29,12 +29,6 @@ CSV_DETECTION = "synthetic_data_export/detection_events.csv"
 CSV_EMOTION   = "synthetic_data_export/emotion_events.csv"
 
 # Floor plan background image for the Zone Visit Frequency Heatmap.
-# Grayscale version used deliberately: the original floor plan's saturated
-# blue/purple/red/orange zone-type colors visually compete with the bubble
-# colorscale (which also runs blue->purple->red for visitor count), making
-# it hard to tell "this is a store" apart from "this zone has high
-# traffic." Grayscale recedes into the background and lets the bubble
-# colors carry 100% of the data signal.
 FLOOR_PLAN_PATH = "assets/mall_floor_plan_grayscale.png"
 if not os.path.exists(FLOOR_PLAN_PATH):
     FLOOR_PLAN_PATH = None  # heatmap falls back to markers-only, no crash
@@ -346,7 +340,6 @@ def load_data(
         # prev_zone_name: derive from THIS CSV's own zone_id -> zone_name
         # mapping (self-referential merge), now that both zone_id and
         # previous_zone_id are normalised to the SAME clean string format
-        # (no more '12' vs '12.0' mismatch).
         csv_zone_name_lookup = (
             csv_de[["zone_id", "zone_name"]]
             .dropna(subset=["zone_name"])
@@ -356,11 +349,6 @@ def load_data(
         csv_de = csv_de.merge(csv_zone_name_lookup, on="previous_zone_id", how="left")
 
     # ── CSV: emotion_events (PRIORITY SOURCE) ──
-    # Typically much smaller than detection_events (one row per *face*
-    # detection, not per frame), so a plain read is usually fine — but we
-    # still narrow it to only the unique_detection_ids we kept above,
-    # which also caps its effective size to whatever survived the date
-    # filter rather than the full file.
     try:
         csv_ee = pd.read_csv(CSV_EMOTION)
         if not csv_de.empty and "unique_detection_id" in csv_de.columns:
@@ -374,12 +362,6 @@ def load_data(
         csv_ee = pd.DataFrame()
 
     # ── Postgres: detection_events (OPTIONAL FALLBACK / SUPPLEMENTARY) ──
-    # Pulled in to fill gaps — e.g. real production data alongside
-    # synthetic data, or dates the CSV doesn't cover — but CSV rows win
-    # on any unique_detection_id collision (see drop_duplicates below).
-    # Gated behind use_postgres: skipping this avoids loading a second,
-    # potentially large, full-range result set into memory on top of the
-    # CSV data, which is pure overhead for local dev against synthetic data.
     if use_postgres:
         try:
             pg_de = conn.query(
@@ -679,11 +661,7 @@ st.header("Customer Journey", divider="rainbow", anchor=False)
 
 df_journey = combined_de[combined_de["reid_id"].notna()].copy()
 
-# Defensive: older CSVs (generated before this column existed) may lack
-# zone_type entirely. Without this, any .str accessor on a missing column
-# raises a KeyError and silently kills every chart below it (this was the
-# root cause of "Avg Dwell Time" showing nothing even after zone_name was
-# fixed — zone_type was never written to detection_rows in the generator).
+
 if "zone_type" not in df_journey.columns:
     df_journey["zone_type"] = None
 
@@ -752,18 +730,6 @@ else:
     if transitions.empty:
         st.info("No transitions match the selected source/target filter.")
     else:
-        # Force plain Python str/int/float before handing anything to
-        # Plotly. transitions["source"]/["target"] can carry pandas
-        # `category` dtype this far upstream (zone_name/prev_zone_name are
-        # cast to category when combined_de is built, and that dtype
-        # survives groupby/rename). Category scalars are NOT plain str —
-        # passing them into go.Sankey's node/link dicts means Plotly's
-        # JSON encoder has to serialize pandas Categorical objects, which
-        # is a known source of runaway/incorrect serialization in some
-        # plotly+pandas version combinations and can produce a much larger
-        # or malformed payload than the same data as plain strings would.
-        # This dataset is tiny (22 nodes / 190 edges) — converting costs
-        # nothing and removes the dtype as a variable entirely.
         transitions = transitions.astype({"source": str, "target": str})
         transitions["value"] = transitions["value"].astype(int)
 
@@ -853,8 +819,6 @@ else:
         df_store_pivot["store_dwell_seconds"] = (
             df_store_pivot["exit"] - df_store_pivot["entry"]
         ).dt.total_seconds()
-        # Guard against bad pairings (exit before entry) — shouldn't happen
-        # given journey generation order, but keep the chart honest.
         df_store_pivot = df_store_pivot[df_store_pivot["store_dwell_seconds"] >= 0]
 
         if df_store_pivot.empty:
@@ -885,7 +849,7 @@ else:
     st.subheader("Zone Visit Frequency Heatmap", anchor=False)
     # Collapse Store_X_Entry / Store_X_Exit into a single "Store_X" entry
     # (same logic as the Sankey and dwell time charts above) so each store
-    # counts as one zone for visit frequency, not two separate checkpoints.
+    # counts as one zone for visit frequency
     df_zone_visits_src = df_journey.dropna(subset=["reid_id", "zone_name"]).copy()
     df_zone_visits_src["zone_name_clean"] = collapse_store_entry_exit(df_zone_visits_src["zone_name"].astype(str))
     zone_visits = (
@@ -1108,7 +1072,7 @@ df_intrusion = combined_de[
 
 # The zone_id → zones join can come back NULL for some rows depending on
 # source data quality, so backfill zone_name/zone_type explicitly for this
-# camera — it only ever covers one zone.
+# camera 
 df_intrusion["zone_name"] = "Renovation_Area_Restricted"
 df_intrusion["zone_type"] = "restricted"
 
