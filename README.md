@@ -39,8 +39,7 @@ This system layers five computer vision technologies on top of a standard mall c
 | Re-Identification | [OSNet via torchreid](https://github.com/KaiyangZhou/deep-person-reid) |
 | Emotion Classification | [DeepFace](https://github.com/serengil/deepface) |
 | Zone Configuration | [Roboflow PolygonZone](https://polygonzone.roboflow.com/) |
-| Object Tracking | [ByteTrack](https://github.com/ifzhang/ByteTrack) |
-| Database | PostgreSQL (local) |
+| Database | [PostgreSQL (local)](https://www.postgresql.org) |
 | Dashboard | Streamlit |
 | Notifications | Telegram Bot API + Postgres LISTEN/NOTIFY |
 | Demo Environment | Jupyter Notebook (VS Code) |
